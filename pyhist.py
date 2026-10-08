@@ -487,6 +487,7 @@ def main():
     cursor_idx = 0
     scroll_top = 0
     flash_text = None
+    flash_until = 0.0
 
     # Cache of the last computed (base_sorted, display_index, sorted_list),
     # keyed on everything that can actually change the result. Without
@@ -599,12 +600,13 @@ def main():
 
                 output.append(term.move_yx(height - 2, 0) + border_fn("─" * width))
                 footer_content = (
-                    flash_text if flash_text else build_footer(keybinds, width)
+                    flash_text
+                    if (flash_text and time.time() < flash_until)
+                    else build_footer(keybinds, width)
                 )
                 output.append(
                     term.move_yx(height - 1, 0) + footer_fn(footer_content[: width - 1])
                 )
-                flash_text = None
 
                 print("".join(output), end="", flush=True)
 
@@ -686,8 +688,10 @@ def main():
                         print(term.hide_cursor, end="", flush=True)
                     except FileNotFoundError:
                         flash_text = "nvim not found on PATH"
+                        flash_until = time.time() + 2
                     except Exception:
                         flash_text = "couldn't open history view"
+                        flash_until = time.time() + 2
                     finally:
                         if md_path:
                             try:
@@ -705,6 +709,7 @@ def main():
                             if ok
                             else "copy failed -- is wl-copy installed?"
                         )
+                        flash_until = time.time() + 2
                     continue
                 elif val == keybinds["open_new"]:
                     if sorted_list:
