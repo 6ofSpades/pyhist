@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import termios
 import time
 from datetime import date, datetime
 from pathlib import Path
@@ -76,10 +77,34 @@ def send_action_to_browser(action, url):
 
 def copy_to_clipboard(text):
     try:
-        subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True, timeout=1)
-        return True
+        p = subprocess.Popen(
+            ["wl-copy"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,  # no controlling terminal -> can't touch our tty
+        )
+        p.stdin.write(text.encode("utf-8"))
+        p.stdin.close()
+        p.wait(timeout=1)
+        return p.returncode == 0
     except Exception:
         return False
+
+
+def save_tty():
+    try:
+        return termios.tcgetattr(sys.__stdin__.fileno())
+    except Exception:
+        return None
+
+
+def restore_tty(saved):
+    if saved is not None:
+        try:
+            termios.tcsetattr(sys.__stdin__.fileno(), termios.TCSADRAIN, saved)
+        except Exception:
+            pass
 
 
 def parse_keybind_value(value):
@@ -487,6 +512,7 @@ def main():
 
     try:
         with term.raw(), term.hidden_cursor():
+            saved_tty = save_tty()
             while True:
                 width = term.width
                 height = term.height
@@ -673,6 +699,7 @@ def main():
                     if sorted_list:
                         url = sorted_list[cursor_idx]["url"]
                         ok = copy_to_clipboard(url)
+                        restore_tty(saved_tty)
                         flash_text = (
                             f"copied: {url}"
                             if ok
