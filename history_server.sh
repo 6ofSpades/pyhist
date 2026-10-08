@@ -31,6 +31,7 @@ try:
             break
         chunks.append(chunk)
     print(b"".join(chunks).decode("utf-8").strip(), flush=True)
+    conn.sendall(b"ok")
     conn.close()
 except socket.timeout:
     pass
