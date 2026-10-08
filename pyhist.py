@@ -108,11 +108,9 @@ def restore_tty(saved):
 
 
 def parse_keybind_value(value):
-    """Accepts 'C-<letter>' (e.g. 'C-o') or a raw \\uXXXX escape. Returns
-    a single control character, or None if the value can't be parsed."""
     if not isinstance(value, str):
         return None
-    m = re.fullmatch(r"[Cc]-([A-Za-z])", value)
+    m = re.fullmatch(r"[Cc]-([A-Za-z@\[\\\]^_])", value)
     if m:
         return chr(ord(m.group(1).upper()) - 0x40)
     m = re.fullmatch(r"\\u([0-9a-fA-F]{4})", value)
@@ -126,7 +124,7 @@ def parse_keybind_value(value):
 def keybind_display(ch):
     """Inverse of parse_keybind_value, for writing the starter config."""
     code = ord(ch)
-    if code < 0x20 and code != 0:
+    if 0 < code < 0x20:
         return "C-" + chr(code + 0x40).lower()
     return f"\\u{code:04x}"
 
